@@ -45,7 +45,8 @@ def update_preview(file_path, page_number):
         pdf_preview_modified.config(image=image_tk)
         pdf_preview_modified.image = image_tk
 
-        page_number_var.set(f"{page_number + 1}/{page_count}")
+        page_number_var.set(f"{page_number + 1}")
+        total_page_number_var.set(f"{page_number + 1}/{page_count}")
 
 def on_pdf_selected(event):
     global current_pdf
@@ -70,8 +71,15 @@ def change_page(increment):
 
 def go_to_page():
     if current_pdf:
-        page_number = int(page_entry.get()) - 1
-        update_preview(current_pdf, page_number)
+        pg = int(page_entry.get())
+        if pg < 1:
+            pg = 1
+        elif pg > page_count:
+            pg = page_count
+        else:
+            None
+        
+        update_preview(current_pdf, pg-1)
 
 current_pdf = None
 current_page = 0
@@ -105,7 +113,7 @@ select_button.grid(row=0, column=0, pady=10)
 clear_button = tk.Button(select_frame, text="Clear PDFs", command=clear_pdfs)
 clear_button.grid(row=0, column=1, pady=10)
 
-pdf_listbox = tk.Listbox(select_frame, width=100)
+pdf_listbox = tk.Listbox(select_frame, width=75)
 pdf_listbox.grid(row=1, column=0, columnspan=2, pady=10)
 pdf_listbox.bind("<<ListboxSelect>>", on_pdf_selected)
 
@@ -136,9 +144,15 @@ pdf_preview_modified.grid(row=1, column=2, padx=5, pady=5)
 prev_button = tk.Button(page_controls, text="<", command=lambda: change_page(-1))
 prev_button.grid(row=0, column=0)
 
+total_page_number_var = tk.StringVar(value="0/0")
+total_page_entry = tk.Label(page_controls, textvariable=total_page_number_var)
+total_page_entry.grid(row=0, column=1)
+total_page_entry.config(font =("Arial", 16))
+
 page_number_var = tk.StringVar()
-page_entry = tk.Entry(page_controls, textvariable=page_number_var, width=10)
-page_entry.grid(row=0, column=1)
+page_entry = tk.Entry(page_controls, textvariable=page_number_var, width=5)
+page_entry.grid(row=1, column=1)
+
 
 page_entry.bind("<Return>", lambda event: go_to_page())
 
