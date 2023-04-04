@@ -23,6 +23,8 @@ def remove_text():
 
 def update_preview(file_path, page_number):
     pdf_doc = fitz.open(file_path)
+    
+    global page_count
     page_count = len(pdf_doc)
 
     if 0 <= page_number < page_count:
@@ -52,6 +54,13 @@ def on_pdf_selected(event):
 
 def change_page(increment):
     global current_page
+    
+    if (current_page == 0) and (increment < 0):
+        return
+    
+    if (current_page == page_count-1) and (increment > 0):
+        return
+
     if current_pdf:
         current_page += increment
         update_preview(current_pdf, current_page)
@@ -83,7 +92,7 @@ modifiers_text_list_frame.grid(row=1, column=0, padx=5, pady=5)
 
 
 preview_frame = tk.Frame(root)
-preview_frame.grid(row=1, column=0, padx=5, pady=5)
+preview_frame.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
 
 #######################################
 
@@ -109,13 +118,14 @@ modifiers_text_listbox.grid(row=1, column=0, pady=10)
 
 
 pdf_preview = tk.Label(preview_frame)
-pdf_preview.pack(side=tk.LEFT, padx=10, pady=10)
-
-pdf_preview_modified = tk.Label(preview_frame)
-pdf_preview_modified.pack(side=tk.RIGHT, padx=10, pady=10)
+pdf_preview.grid(row=1, column=0, padx=5, pady=5)
 
 page_controls = tk.Frame(preview_frame)
-page_controls.pack(side=tk.TOP, padx=10, pady=10)
+page_controls.grid(row=0, column=1, padx=5, pady=5)
+
+pdf_preview_modified = tk.Label(preview_frame)
+pdf_preview_modified.grid(row=1, column=2, padx=5, pady=5)
+
 
 prev_button = tk.Button(page_controls, text="<", command=lambda: change_page(-1))
 prev_button.grid(row=0, column=0)
