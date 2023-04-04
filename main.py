@@ -9,6 +9,9 @@ def select_pdfs():
         for file_path in file_paths:
             pdf_listbox.insert(tk.END, file_path)
 
+def clear_pdfs():
+    pdf_listbox.delete(0, tk.END)
+
 def add_text():
     text = modifiers_text_entry.get()
     if text:
@@ -99,8 +102,11 @@ preview_frame.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
 select_button = tk.Button(select_frame, text="Select PDFs", command=select_pdfs)
 select_button.grid(row=0, column=0, pady=10)
 
+clear_button = tk.Button(select_frame, text="Clear PDFs", command=clear_pdfs)
+clear_button.grid(row=0, column=1, pady=10)
+
 pdf_listbox = tk.Listbox(select_frame, width=100)
-pdf_listbox.grid(row=1, column=0, pady=10)
+pdf_listbox.grid(row=1, column=0, columnspan=2, pady=10)
 pdf_listbox.bind("<<ListboxSelect>>", on_pdf_selected)
 
 
