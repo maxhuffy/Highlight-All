@@ -18,7 +18,8 @@ def add_text():
 def remove_text():
     selected = modifiers_text_listbox.curselection()
     if selected:
-        modifiers_text_listbox.delete(selected)
+        for index in reversed(selected):
+            modifiers_text_listbox.delete(index)
 
 def update_preview(file_path, page_number):
     pdf_doc = fitz.open(file_path)
@@ -103,7 +104,7 @@ modifiers_remove_button.grid(row=0, column=1, pady=10, padx=5)
 modifiers_text_entry = tk.Entry(modifiers_text_list_frame, width=33)
 modifiers_text_entry.grid(row=0, column=0, padx=5)
 
-modifiers_text_listbox = tk.Listbox(modifiers_text_list_frame, width=33)
+modifiers_text_listbox = tk.Listbox(modifiers_text_list_frame, width=33, selectmode=tk.EXTENDED)
 modifiers_text_listbox.grid(row=1, column=0, pady=10)
 
 
