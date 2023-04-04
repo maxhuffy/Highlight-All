@@ -124,11 +124,14 @@ modifiers_add_button.grid(row=0, column=0, pady=10, padx=5)
 modifiers_remove_button = tk.Button(modifiers_text_buttons_frame, text="Remove Text", command=remove_text)
 modifiers_remove_button.grid(row=0, column=1, pady=10, padx=5)
 
+modifiers_text = tk.Label(modifiers_text_list_frame, text="Find:")
+modifiers_text.grid(row=0, column=0, padx=5)
+
 modifiers_text_entry = tk.Entry(modifiers_text_list_frame, width=33)
-modifiers_text_entry.grid(row=0, column=0, padx=5)
+modifiers_text_entry.grid(row=0, column=1, padx=5)
 
 modifiers_text_listbox = tk.Listbox(modifiers_text_list_frame, width=33, selectmode=tk.EXTENDED)
-modifiers_text_listbox.grid(row=1, column=0, pady=10)
+modifiers_text_listbox.grid(row=1, column=1, pady=10)
 
 
 pdf_preview = tk.Label(preview_frame)
@@ -160,6 +163,6 @@ next_button = tk.Button(page_controls, text=">", command=lambda: change_page(1))
 next_button.grid(row=0, column=2)
 
 # Prevent the user from resizing the window
-#root.resizable(0, 0)
+root.resizable(0, 0)
 
 root.mainloop()
