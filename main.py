@@ -24,7 +24,7 @@ def remove_text():
         for index in reversed(selected):
             modifiers_text_listbox.delete(index)
 
-def update_preview(file_path, page_number):
+def update_preview(file_path, page_number, no_init_highlights=True):
     pdf_doc = fitz.open(file_path)
     
     global page_count
@@ -42,11 +42,54 @@ def update_preview(file_path, page_number):
         pdf_preview.config(image=image_tk)
         pdf_preview.image = image_tk
 
+        page_number_var.set(f"{page_number + 1}")
+        total_page_number_var.set(f"{page_number + 1}/{page_count}")
+
+        if no_init_highlights:
+            pdf_preview_modified.config(image=image_tk)
+            pdf_preview_modified.image = image_tk
+        else:
+            None
+            update_modified_preview_doc(page_number, page_count)
+
+def mark_word(page, text):
+    """Underline each word that contains 'text'.
+    """
+    found = 0
+    wlist = page.get_text("words")  # make the word list
+    for w in wlist:  # scan through all words on page
+        if text in w[4]:  # w[4] is the word's string
+            found += 1  # count
+            r = fitz.Rect(w[:4])  # make rect from word bbox
+            page.add_underline_annot(r)  # underline
+            print("Found!")
+    return found
+
+def apply_highlight():
+    global no_init_highlights
+    no_init_highlights = False
+
+    global modified_pdf_doc
+    modified_pdf_doc = fitz.open(current_pdf)
+    
+    for page in modified_pdf_doc:
+        for word in modifiers_text_listbox.get(0, tk.END):
+            found = mark_word(page, word)
+
+def update_modified_preview_doc(page_number, page_count):
+
+    if 0 <= page_number < page_count:
+        page = modified_pdf_doc[page_number]
+        zoom = 0.8
+        matrix = fitz.Matrix(zoom, zoom)
+        pixmap = page.get_pixmap(matrix=matrix)
+
+        pil_image = Image.frombytes("RGB", [pixmap.width, pixmap.height], pixmap.samples)
+        image_tk = ImageTk.PhotoImage(pil_image)
+
         pdf_preview_modified.config(image=image_tk)
         pdf_preview_modified.image = image_tk
 
-        page_number_var.set(f"{page_number + 1}")
-        total_page_number_var.set(f"{page_number + 1}/{page_count}")
 
 def on_pdf_selected(event):
     global current_pdf
@@ -90,6 +133,9 @@ current_pdf = None
 current_page = 0
 
 colors = [None, "#FFFF77"]
+
+global no_init_highlights
+no_init_highlights = True
 
 root = tk.Tk()
 root.title("PDF Bulk Highlighter")
@@ -144,7 +190,7 @@ highlight_options_button.grid(row=0, column=3, pady=10)
 highlight_options_selected_color = tk.Frame(text_finder_list_frame, bg=colors[1], width=35, height=35)
 highlight_options_selected_color.grid(row=0, column=2, pady=10, padx=10)
 
-apply_highlight_button = tk.Button(text_finder_list_frame, text="Find Words")
+apply_highlight_button = tk.Button(text_finder_list_frame, text="Find Words", command=apply_highlight)
 apply_highlight_button.grid(row=1, column=2, pady=10)
 apply_highlight_button = tk.Button(text_finder_list_frame, text="Apply")
 apply_highlight_button.grid(row=1, column=3, pady=10)
