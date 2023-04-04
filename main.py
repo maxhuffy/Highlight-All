@@ -9,6 +9,17 @@ def select_pdfs():
         for file_path in file_paths:
             pdf_listbox.insert(tk.END, file_path)
 
+def add_text():
+    text = modifiers_text_entry.get()
+    if text:
+        modifiers_text_listbox.insert(tk.END, text)
+        modifiers_text_entry.delete(0, tk.END)
+
+def remove_text():
+    selected = modifiers_text_listbox.curselection()
+    if selected:
+        modifiers_text_listbox.delete(selected)
+
 def update_preview(file_path, page_number):
     pdf_doc = fitz.open(file_path)
     page_count = len(pdf_doc)
@@ -57,14 +68,23 @@ root.title("PDF Bulk Highlighter")
 
 
 select_frame = tk.Frame(root)
-select_frame.pack(anchor='nw', padx=5, pady=5)
+select_frame.grid(row=0, column=0, padx=5, pady=5)
+
 
 modifiers_frame = tk.Frame(root)
-modifiers_frame.pack(anchor='ne', padx=5, pady=5)
+modifiers_frame.grid(row=0, column=1, padx=5, pady=5)
+
+modifiers_text_buttons_frame = tk.Frame(modifiers_frame)
+modifiers_text_buttons_frame.grid(row=0, column=0, padx=5)
+
+modifiers_text_list_frame = tk.Frame(modifiers_frame)
+modifiers_text_list_frame.grid(row=1, column=0, padx=5, pady=5)
+
 
 preview_frame = tk.Frame(root)
-preview_frame.pack(anchor='s', padx=5, pady=5)
+preview_frame.grid(row=1, column=0, padx=5, pady=5)
 
+#######################################
 
 select_button = tk.Button(select_frame, text="Select PDFs", command=select_pdfs)
 select_button.grid(row=0, column=0, pady=10)
@@ -72,6 +92,19 @@ select_button.grid(row=0, column=0, pady=10)
 pdf_listbox = tk.Listbox(select_frame, width=100)
 pdf_listbox.grid(row=1, column=0, pady=10)
 pdf_listbox.bind("<<ListboxSelect>>", on_pdf_selected)
+
+
+modifiers_add_button = tk.Button(modifiers_text_buttons_frame, text="Add Text", command=add_text)
+modifiers_add_button.grid(row=0, column=0, pady=10, padx=5)
+
+modifiers_remove_button = tk.Button(modifiers_text_buttons_frame, text="Remove Text", command=remove_text)
+modifiers_remove_button.grid(row=0, column=1, pady=10, padx=5)
+
+modifiers_text_entry = tk.Entry(modifiers_text_list_frame, width=33)
+modifiers_text_entry.grid(row=0, column=0, padx=5)
+
+modifiers_text_listbox = tk.Listbox(modifiers_text_list_frame, width=33)
+modifiers_text_listbox.grid(row=1, column=0, pady=10)
 
 
 pdf_preview = tk.Label(preview_frame)
@@ -96,6 +129,6 @@ next_button = tk.Button(page_controls, text=">", command=lambda: change_page(1))
 next_button.grid(row=0, column=2)
 
 # Prevent the user from resizing the window
-root.resizable(0, 0)
+#root.resizable(0, 0)
 
 root.mainloop()
