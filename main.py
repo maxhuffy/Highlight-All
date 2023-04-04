@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import filedialog, colorchooser
 import fitz  # PyMuPDF
 from PIL import Image, ImageTk
 
@@ -32,7 +32,7 @@ def update_preview(file_path, page_number):
 
     if 0 <= page_number < page_count:
         page = pdf_doc[page_number]
-        zoom = 0.7
+        zoom = 0.8
         matrix = fitz.Matrix(zoom, zoom)
         pixmap = page.get_pixmap(matrix=matrix)
 
@@ -81,29 +81,35 @@ def go_to_page():
         
         update_preview(current_pdf, pg-1)
 
+def change_color():
+    global colors
+    colors = colorchooser.askcolor(title="Tkinter Color Chooser", color=colors[1])
+    highlight_options_selected_color.configure(bg=colors[1])
+
 current_pdf = None
 current_page = 0
+
+colors = [None, "#FFFF77"]
 
 root = tk.Tk()
 root.title("PDF Bulk Highlighter")
 
-
 select_frame = tk.Frame(root)
-select_frame.grid(row=0, column=0, padx=5, pady=5)
+select_frame.grid(row=0, column=0, padx=5, pady=5, rowspan=2)
 
 
-modifiers_frame = tk.Frame(root)
-modifiers_frame.grid(row=0, column=1, padx=5, pady=5)
+text_finder_frame = tk.Frame(root)
+text_finder_frame.grid(row=0, column=1, padx=5, pady=5, rowspan=3)
 
-modifiers_text_buttons_frame = tk.Frame(modifiers_frame)
-modifiers_text_buttons_frame.grid(row=0, column=0, padx=5)
+text_finder_buttons_frame = tk.Frame(text_finder_frame)
+text_finder_buttons_frame.grid(row=0, column=0, padx=5)
 
-modifiers_text_list_frame = tk.Frame(modifiers_frame)
-modifiers_text_list_frame.grid(row=1, column=0, padx=5, pady=5)
+text_finder_list_frame = tk.Frame(text_finder_frame)
+text_finder_list_frame.grid(row=1, column=0, padx=5, pady=5)
 
 
 preview_frame = tk.Frame(root)
-preview_frame.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
+preview_frame.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
 
 #######################################
 
@@ -118,31 +124,46 @@ pdf_listbox.grid(row=1, column=0, columnspan=2, pady=10)
 pdf_listbox.bind("<<ListboxSelect>>", on_pdf_selected)
 
 
-modifiers_add_button = tk.Button(modifiers_text_buttons_frame, text="Add Text", command=add_text)
+modifiers_add_button = tk.Button(text_finder_buttons_frame, text="Add Text", command=add_text)
 modifiers_add_button.grid(row=0, column=0, pady=10, padx=5)
 
-modifiers_remove_button = tk.Button(modifiers_text_buttons_frame, text="Remove Text", command=remove_text)
+modifiers_remove_button = tk.Button(text_finder_buttons_frame, text="Remove Text", command=remove_text)
 modifiers_remove_button.grid(row=0, column=1, pady=10, padx=5)
 
-modifiers_text = tk.Label(modifiers_text_list_frame, text="Find:")
+modifiers_text = tk.Label(text_finder_list_frame, text="Find:")
 modifiers_text.grid(row=0, column=0, padx=5)
 
-modifiers_text_entry = tk.Entry(modifiers_text_list_frame, width=33)
+modifiers_text_entry = tk.Entry(text_finder_list_frame, width=33)
 modifiers_text_entry.grid(row=0, column=1, padx=5)
 
-modifiers_text_listbox = tk.Listbox(modifiers_text_list_frame, width=33, selectmode=tk.EXTENDED)
+modifiers_text_listbox = tk.Listbox(text_finder_list_frame, width=33, selectmode=tk.EXTENDED)
 modifiers_text_listbox.grid(row=1, column=1, pady=10)
+
+highlight_options_button = tk.Button(text_finder_list_frame, text="Choose Highlight", command=change_color)
+highlight_options_button.grid(row=0, column=3, pady=10)
+highlight_options_selected_color = tk.Frame(text_finder_list_frame, bg=colors[1], width=35, height=35)
+highlight_options_selected_color.grid(row=0, column=2, pady=10, padx=10)
+
+apply_highlight_button = tk.Button(text_finder_list_frame, text="Find Words")
+apply_highlight_button.grid(row=1, column=2, pady=10)
+apply_highlight_button = tk.Button(text_finder_list_frame, text="Apply")
+apply_highlight_button.grid(row=1, column=3, pady=10)
 
 
 pdf_preview = tk.Label(preview_frame)
-pdf_preview.grid(row=1, column=0, padx=5, pady=5)
+pdf_preview.grid(row=2, column=0, padx=5, pady=5)
+pdf_preview_title = tk.Label(preview_frame, text="Original")
+pdf_preview_title.grid(row=1, column=0, padx=5)
+pdf_preview_title.config(font =("Arial", 14))
 
 page_controls = tk.Frame(preview_frame)
-page_controls.grid(row=0, column=1, padx=5, pady=5)
+page_controls.grid(row=1, column=1, padx=5, pady=5)
 
 pdf_preview_modified = tk.Label(preview_frame)
-pdf_preview_modified.grid(row=1, column=2, padx=5, pady=5)
-
+pdf_preview_modified.grid(row=2, column=2, padx=5, pady=5)
+pdf_preview_title_modified = tk.Label(preview_frame, text="Modified")
+pdf_preview_title_modified.grid(row=1, column=2, padx=5)
+pdf_preview_title_modified.config(font =("Arial", 14))
 
 prev_button = tk.Button(page_controls, text="<", command=lambda: change_page(-1))
 prev_button.grid(row=0, column=0)
@@ -155,7 +176,6 @@ total_page_entry.config(font =("Arial", 16))
 page_number_var = tk.StringVar()
 page_entry = tk.Entry(page_controls, textvariable=page_number_var, width=5)
 page_entry.grid(row=1, column=1)
-
 
 page_entry.bind("<Return>", lambda event: go_to_page())
 
