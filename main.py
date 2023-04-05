@@ -7,10 +7,9 @@ class PDFBulkHighlighter:
     def __init__(self):
         self.current_pdf = None
         self.current_page = 0
-        self.colors = [None, "#FFFF77"]
+        self.colors = [(1.0, 1.0, 119.0/255), "#FFFF77"]
         self.page_count = 0
-        self.modified_pdf_doc = None
-        self.no_init_highlights = True
+        self.no_highlights = True
 
         self.root = tk.Tk()
         self.root.title("PDF Bulk Highlighter")
@@ -110,7 +109,9 @@ class PDFBulkHighlighter:
         self.update_preview()
 
     def on_pdf_selected(self, event):
+        self.no_highlights = True
         selected_pdf = self.pdf_listbox.get(self.pdf_listbox.curselection())
+        # Stores the doc as a internal variable
         self.current_pdf = fitz.open(selected_pdf)
         self.page_count = len(self.current_pdf)
         self.current_page = 0
@@ -128,20 +129,44 @@ class PDFBulkHighlighter:
             self.modifiers_text_listbox.delete(index)
 
     def change_color(self):
-        color = colorchooser.askcolor()[1]
-        if color:
-            self.colors[1] = color
-            self.highlight_options_selected_color.config(bg=color)
+        self.colors = colorchooser.askcolor(title="Highlighter Color", color=self.colors[1])
+        if self.colors:
+            self.highlight_options_selected_color.config(bg=self.colors[1])
+        print(self.colors)
+
+    #TODO Make sure that our searches aren't case sensitive - better safe than sorry
+    def mark_word(self, page, text):
+        """Underline each word that contains 'text'."""
+        
+        stroke_color = tuple([i/255.0 for i in self.colors[0]])
+        
+        found = 0
+        wlist = page.get_text("words")  # make the word list
+        for w in wlist:  # scan through all words on page
+            if text in w[4]:  # w[4] is the word's string
+                found += 1  # count
+                r = fitz.Rect(w[:4])  # make rect from word bbox
+                highlight = page.add_highlight_annot(r)
+                highlight.set_colors({"stroke":stroke_color})
+                # highlight.set_colors(stroke=stroke_color)
+                highlight.update()
+        return found
 
     def apply_highlight(self):
         # Write code to apply the highlight to the selected text in the PDF
-        None
+        self.no_highlights = False
+
+        for page in self.current_pdf:
+            for word in self.modifiers_text_listbox.get(0, tk.END):
+                found = self.mark_word(page, word)
+        self.update_preview()
 
     def save_file(self):
         # Write code to apply the highlight to the selected text in the PDF
         None
 
     def update_preview(self):
+        
         if self.current_pdf:
             page = self.current_pdf.load_page(self.current_page)
             zoom_matrix = fitz.Matrix(0.8, 0.8)
