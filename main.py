@@ -65,11 +65,16 @@ class PDFBulkHighlighter:
         self.highlight_options_selected_color = tk.Frame(text_finder_list_frame, bg=self.colors[1], width=35, height=35)
         self.highlight_options_selected_color.grid(row=0, column=2, pady=10, padx=10)
 
+        self.markLong = tk.IntVar()
+        long_marking_checkbox = tk.Checkbutton(text_finder_list_frame, text="Highlight entire line?", variable=self.markLong)
+        long_marking_checkbox.grid(row=0, column=4, padx=5, pady=5)
+
         apply_highlight_button = tk.Button(text_finder_list_frame, text="Find Words", command=self.apply_highlight)
         apply_highlight_button.grid(row=1, column=2, pady=10)
         save_highlight_button = tk.Button(text_finder_list_frame, text="Save Highlight ", command=self.save_file)
         save_highlight_button.grid(row=1, column=3, pady=10)
 
+     
         # Preview frame
         self.pdf_preview = tk.Label(preview_frame)
         self.pdf_preview.grid(row=2, column=0, padx=5, pady=5)
@@ -139,13 +144,20 @@ class PDFBulkHighlighter:
         
         stroke_color = tuple([i/255.0 for i in self.colors[0]])
         text = text.lower()
-
-        print(page.get_text("dict"))
         
         wlist = page.get_text("words")  # make the word list
         for w in wlist:  # scan through all words on page
-            if text in w[4].lower():  # w[4] is the word's string 
+            if text == w[4].lower():  # w[4] is the word's string 
                 r = fitz.Rect(w[:4])  # make rect from word bbox
+
+                if self.markLong.get() == 1:    
+                    r.x0 = 0
+                    r.x1 = page.rect.x1
+                    if r.y0 > 4:
+                        r.y0 -= 4
+                    if r.y1 < page.rect.y1 - 4:
+                        r.y1 += 4
+
                 highlight = page.add_highlight_annot(r)
                 highlight.set_colors({"stroke":stroke_color})
                 highlight.update()
@@ -162,15 +174,31 @@ class PDFBulkHighlighter:
         for w in range(len(wlist)-1):
             space_count = 0  
             for i in range(num_of_words):
-                if text_list[i].lower() in wlist[w+i][4].lower():
+                if text_list[i].lower() == wlist[w+i][4].lower():
                     space_count += 1
             
             if space_count == num_of_words:
-                for i in range(num_of_words):
-                    r = fitz.Rect(wlist[w+i][:4])  
+                # Avoid double highlighting since the colors can stack
+                
+
+                if self.markLong.get() == 1:
+                    r = fitz.Rect(wlist[w+i][:4])     
+                    r.x0 = 0
+                    r.x1 = page.rect.x1
+                    if r.y0 > 6:
+                        r.y0 -= 6
+                    if r.y1 < page.rect.y1 - 6:
+                        r.y1 += 6
+
                     highlight = page.add_highlight_annot(r)
                     highlight.set_colors({"stroke":stroke_color})
                     highlight.update()
+                else:
+                    for i in range(num_of_words):
+                        r = fitz.Rect(wlist[w+i][:4])  
+                        highlight = page.add_highlight_annot(r)
+                        highlight.set_colors({"stroke":stroke_color})
+                        highlight.update()
                     
                 
 
