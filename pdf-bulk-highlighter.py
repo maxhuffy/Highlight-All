@@ -1,7 +1,10 @@
 import tkinter as tk
 from tkinter import filedialog, colorchooser
-import fitz  # PyMuPDF
+
+import os
+
 from PIL import Image, ImageTk
+import fitz  # PyMuPDF
 
 class PDFBulkHighlighter:
     def __init__(self):
@@ -18,17 +21,19 @@ class PDFBulkHighlighter:
         self.root = tk.Tk()
         self.root.title("PDF Bulk Highlighter")
         self._build_gui()
+        self.disable_buttons()
         self.root.resizable(0, 0)
         self.root.mainloop()
 
+        
+
     def _build_gui(self):
+        # Select PDFs
+        self.select_button = tk.Button(self.root, text="Select PDFs", command=self.select_pdfs, width=13)
+        self.select_button.grid(row=0, column=1, pady=5, sticky="w")
 
-        # Select PDFs frame
-        select_button = tk.Button(self.root, text="Select PDFs", command=self.select_pdfs, width=13)
-        select_button.grid(row=0, column=1, pady=5, sticky="w")
-
-        clear_button = tk.Button(self.root, text="Clear PDFs", command=self.clear_pdfs, width=13)
-        clear_button.grid(row=0, column=2, pady=0, sticky="w")
+        self.clear_button = tk.Button(self.root, text="Clear PDFs", command=self.clear_pdfs, width=13)
+        self.clear_button.grid(row=0, column=2, pady=0, sticky="w")
 
         self.pdf_listbox = tk.Listbox(self.root, width=75)
         self.pdf_listbox.grid(row=1, column=1, pady=5, columnspan=12, sticky="w", rowspan=5)
@@ -37,44 +42,44 @@ class PDFBulkHighlighter:
         spacer = tk.Frame(self.root, width=10, height=30)
         spacer.grid(row=2+5, column=1)
 
-        # Text Finder frame
-        modifiers_add_button = tk.Button(self.root, text="Add Text", command=self.add_text, width=13)
-        modifiers_add_button.grid(row=3+5, column=1, pady=5, sticky="w")
+        # Text Finder
+        self.add_text_button = tk.Button(self.root, text="Add Text", command=self.add_text, width=13)
+        self.add_text_button.grid(row=3+5, column=1, pady=5, sticky="w")
 
-        modifiers_remove_button = tk.Button(self.root, text="Remove Text", command=self.remove_text, width=13)
-        modifiers_remove_button.grid(row=3+5, column=2, pady=5, sticky="w")
+        self.remove_text_button = tk.Button(self.root, text="Remove Text", command=self.remove_text, width=13)
+        self.remove_text_button.grid(row=3+5, column=2, pady=5, sticky="w")
 
-        modifiers_text = tk.Label(self.root, text="Find:")
-        modifiers_text.grid(row=4+5, column=0, padx=5, sticky="e")
+        find_label = tk.Label(self.root, text="Find:")
+        find_label.grid(row=4+5, column=0, padx=5, sticky="e")
 
-        self.modifiers_text_entry = tk.Entry(self.root, width=37)
-        self.modifiers_text_entry.grid(row=4+5, column=1, sticky="w", columnspan=3)
-        self.modifiers_text_entry.bind("<Return>", self.add_text)
+        self.text_entry = tk.Entry(self.root, width=37)
+        self.text_entry.grid(row=4+5, column=1, sticky="w", columnspan=3)
+        self.text_entry.bind("<Return>", self.add_text)
 
-        self.modifiers_text_listbox = tk.Listbox(self.root, width=37, selectmode=tk.EXTENDED)
-        self.modifiers_text_listbox.grid(row=5+5, column=1, pady=5, sticky="w", columnspan=3, rowspan=6)
+        self.text_listbox = tk.Listbox(self.root, width=37, selectmode=tk.EXTENDED)
+        self.text_listbox.grid(row=5+5, column=1, pady=5, sticky="w", columnspan=3, rowspan=6)
 
-        ##########
+        # Highlight Buttons
 
-        highlight_options_button = tk.Button(self.root, text="Color Picker", command=self.change_color, width=13)
-        highlight_options_button.grid(row=5+5, column=4, padx=10, sticky="w")
-        self.highlight_options_selected_color = tk.Frame(self.root, bg=self.colors[1], width=75, height=25)
-        self.highlight_options_selected_color.grid(row=5+5, column=5, padx=25)
+        self.color_picker_button = tk.Button(self.root, text="Color Picker", command=self.change_color, width=13)
+        self.color_picker_button.grid(row=5+5, column=4, padx=10, sticky="w")
+        self.selected_color_display = tk.Frame(self.root, bg=self.colors[1], width=75, height=25)
+        self.selected_color_display.grid(row=5+5, column=5, padx=25)
 
-        apply_highlight_button = tk.Button(self.root, text="Apply Highlight", command=self.apply_highlight, width=13)
-        apply_highlight_button.grid(row=6+5, column=4, padx=10, sticky="w")
+        self.apply_highlight_button = tk.Button(self.root, text="Apply Highlight", command=self.apply_highlight, width=13)
+        self.apply_highlight_button.grid(row=6+5, column=4, padx=10, sticky="w")
 
-        reset_highlight_button = tk.Button(self.root, text="Reset Highlights", command=self.reset_pdf, width=13)
-        reset_highlight_button.grid(row=6+5+1, column=4, padx=10, sticky="w")
+        self.reset_highlights_button = tk.Button(self.root, text="Reset Highlights", command=self.reset_pdf, width=13)
+        self.reset_highlights_button.grid(row=6+5+1, column=4, padx=10, sticky="w")
 
-        save_highlight_button = tk.Button(self.root, text="Save File", command=self.save_file, width=13)
-        save_highlight_button.grid(row=13+18, column=1, sticky="w")
+        self.save_file_button = tk.Button(self.root, text="Save File", command=self.save_file, width=13)
+        self.save_file_button.grid(row=13+18, column=1, sticky="w")
         self.markLong = tk.IntVar()
-        long_marking_checkbox = tk.Checkbutton(self.root, text="Highlight entire line?", variable=self.markLong)
-        long_marking_checkbox.grid(row=6+5, column=5, sticky="w")
+        self.highlight_whole_line_checkbox = tk.Checkbutton(self.root, text="Highlight entire line?", variable=self.markLong)
+        self.highlight_whole_line_checkbox.grid(row=6+5, column=5, sticky="w")
 
      
-        # # Preview frame
+        # Preview
 
         self.pdf_preview = tk.Label(self.root)
         self.pdf_preview.grid(row=2, column=10, padx=5, pady=5, rowspan=30)
@@ -102,31 +107,60 @@ class PDFBulkHighlighter:
 
         next_button = tk.Button(page_controls, text=">", command=lambda: self.change_page(1))
         next_button.grid(row=0, column=3)
+    
+    def disable_buttons(self):
+        """Disable buttons when no PDF is selected."""
+        self.clear_button.config(state=tk.DISABLED)
+        self.add_text_button.config(state=tk.DISABLED)
+        self.remove_text_button.config(state=tk.DISABLED)
+        self.color_picker_button.config(state=tk.DISABLED)
+        self.apply_highlight_button.config(state=tk.DISABLED)
+        self.reset_highlights_button.config(state=tk.DISABLED)
+        self.save_file_button.config(state=tk.DISABLED)
+        self.highlight_whole_line_checkbox.config(state=tk.DISABLED)
 
+    def enable_buttons(self):
+        """Enable buttons when a PDF is selected."""
+        self.clear_button.config(state=tk.NORMAL)
+        self.add_text_button.config(state=tk.NORMAL)
+        self.remove_text_button.config(state=tk.NORMAL)
+        self.color_picker_button.config(state=tk.NORMAL)
+        self.apply_highlight_button.config(state=tk.NORMAL)
+        self.reset_highlights_button.config(state=tk.NORMAL)
+        self.save_file_button.config(state=tk.NORMAL)
+        self.highlight_whole_line_checkbox.config(state=tk.NORMAL)
+
+    # PDF handling methods
     def select_pdfs(self):
+        """Open file dialog, add selected PDFs to pdf_listbox."""
         file_paths = filedialog.askopenfilenames(filetypes=[("PDF Files", "*.pdf")])
         for file_path in file_paths:
             self.pdf_listbox.insert(tk.END, file_path)
         if len(file_paths) == 1:
             self.pdf_listbox.selection_set(0)
             self.on_pdf_selected()
+        if len(file_paths) > 0:
+            self.enable_buttons()
 
     def clear_pdfs(self):
+        """Remove PDFs from pdf_listbox, reset attributes, clear preview."""
         self.pdf_listbox.delete(0, tk.END)
         self.current_pdf = None
         self.page_count = 0
         self.update_preview()
+        self.disable_buttons()
 
     def reset_pdf(self):
+        """Reload current PDF, discard unsaved highlights."""
         self.current_pdf = fitz.open(self.selected_pdf)
         self.update_preview()
 
     def on_pdf_selected(self, event=None):
-
+        """Load selected PDF, update attributes and preview."""
         # Catch errors
         if not self.pdf_listbox.curselection():
             return
-
+            
         self.no_highlights = True
         self.selected_pdf = self.pdf_listbox.get(self.pdf_listbox.curselection())
         # Stores the doc as a internal variable
@@ -135,107 +169,110 @@ class PDFBulkHighlighter:
         self.current_page = 0
         self.update_preview()
 
+    def save_file(self):
+        """Save highlighted PDF, open file dialog for location."""
+        init_f = os.path.splitext(os.path.basename(self.selected_pdf))[0]
+        save_path = filedialog.asksaveasfilename(initialfile=f"{init_f}_HIGHLIGHTED", defaultextension=".pdf", filetypes=[("PDF Files", "*.pdf")])
+        if save_path:
+            self.current_pdf.save(save_path)
+
+    # Text handling methods
     def add_text(self, event=None):
-        text = self.modifiers_text_entry.get()
+        """Add entered text to text_listbox."""
+        text = self.text_entry.get()
         if text:
-            self.modifiers_text_listbox.insert(tk.END, text)
-            self.modifiers_text_entry.delete(0, tk.END)
+            self.text_listbox.insert(tk.END, text)
+            self.text_entry.delete(0, tk.END)
 
     def remove_text(self):
-        selected_indices = self.modifiers_text_listbox.curselection()
+        """Remove selected text entries from text_listbox."""
+        selected_indices = self.text_listbox.curselection()
         for index in reversed(selected_indices):
-            self.modifiers_text_listbox.delete(index)
+            self.text_listbox.delete(index)
 
+    # Color handling methods
     def change_color(self):
+        """Open color picker, update selected_color_display."""
         self.colors = colorchooser.askcolor(title="Highlighter Color", color=self.colors[1])
         if self.colors[0]:
-            self.highlight_options_selected_color.config(bg=self.colors[1])
+            self.selected_color_display.config(bg=self.colors[1])
             self.colors_backup = self.colors
         else:
             self.colors = self.colors_backup
 
+    # Highlight handling methods
     def mark_word(self, page, text):
-        """Underline each word that contains 'text'."""
-        
+        """Highlight word/line on PDF page with selected color."""
         stroke_color = tuple([i/255.0 for i in self.colors[0]])
         text = text.lower()
         
-        wlist = page.get_text("words")  # make the word list
-        for w in wlist:  # scan through all words on page
+        word_list = page.get_text("words")  # make the word list
+        for w in word_list:  # scan through all words on page
             if text == w[4].lower():  # w[4] is the word's string 
-                r = fitz.Rect(w[:4])  # make rect from word bbox
+                highlight_rect = fitz.Rect(w[:4])  # make rect from word bbox
 
                 if self.markLong.get() == 1:    
-                    r.x0 = 0
-                    r.x1 = page.rect.x1
-                    if r.y0 > 4:
-                        r.y0 -= 4
-                    if r.y1 < page.rect.y1 - 4:
-                        r.y1 += 4
+                    highlight_rect.x0 = 0
+                    highlight_rect.x1 = page.rect.x1
+                    if highlight_rect.y0 > 4:
+                        highlight_rect.y0 -= 4
+                    if highlight_rect.y1 < page.rect.y1 - 4:
+                        highlight_rect.y1 += 4
 
-                highlight = page.add_highlight_annot(r)
+                highlight = page.add_highlight_annot(highlight_rect)
                 highlight.set_colors({"stroke":stroke_color})
                 highlight.update()
     
     def mark_spaced_word(self, page, text):
-        """Underline each word that contains 'text'."""
-        
+        """Highlight spaced words/lines on PDF page with color."""
         stroke_color = tuple([i/255.0 for i in self.colors[0]])
 
         num_of_words = len(text.split())
         text_list = text.split()
         
-        wlist = page.get_text("words")
-        for w in range(len(wlist)-1):
+        word_list = page.get_text("words")
+        for w in range(len(word_list)-1):
             space_count = 0  
             for i in range(num_of_words):
-                if text_list[i].lower() == wlist[w+i][4].lower():
+                if text_list[i].lower() == word_list[w+i][4].lower():
                     space_count += 1
             
             if space_count == num_of_words:
                 # Avoid double highlighting since the colors can stack
                 if self.markLong.get() == 1:
-                    r = fitz.Rect(wlist[w+i][:4])     
-                    r.x0 = 0
-                    r.x1 = page.rect.x1
-                    if r.y0 > 6:
-                        r.y0 -= 6
-                    if r.y1 < page.rect.y1 - 6:
-                        r.y1 += 6
+                    highlight_rect = fitz.Rect(word_list[w+i][:4])     
+                    highlight_rect.x0 = 0
+                    highlight_rect.x1 = page.rect.x1
+                    if highlight_rect.y0 > 6:
+                        highlight_rect.y0 -= 6
+                    if highlight_rect.y1 < page.rect.y1 - 6:
+                        highlight_rect.y1 += 6
 
-                    highlight = page.add_highlight_annot(r)
+                    highlight = page.add_highlight_annot(highlight_rect)
                     highlight.set_colors({"stroke":stroke_color})
                     highlight.update()
                 else:
                     for i in range(num_of_words):
-                        r = fitz.Rect(wlist[w+i][:4])  
-                        highlight = page.add_highlight_annot(r)
+                        highlight_rect = fitz.Rect(word_list[w+i][:4])  
+                        highlight = page.add_highlight_annot(highlight_rect)
                         highlight.set_colors({"stroke":stroke_color})
                         highlight.update()
                     
-                
-
     def apply_highlight(self):
-        # Write code to apply the highlight to the selected text in the PDF
+        """Apply highlights to PDF, update preview."""
         self.no_highlights = False
 
         for page in self.current_pdf:
-            for word in self.modifiers_text_listbox.get(0, tk.END):
+            for word in self.text_listbox.get(0, tk.END):
                 if " " in word:
                     self.mark_spaced_word(page, word)
                 else:
                     self.mark_word(page, word)
         self.update_preview()
 
-    def save_file(self):
-        init_f = self.selected_pdf.split("/")[-1]
-        init_f = init_f.split(".pdf")[0]
-        save_path = filedialog.asksaveasfilename(initialfile=f"{init_f}_HIGHLIGHTED", defaultextension=".pdf", filetypes=[("PDF Files", "*.pdf")])
-        if save_path:
-            self.current_pdf.save(save_path)
-
+    # Preview handling methods
     def update_preview(self):
-        
+        """Update PDF preview, display highlights and page number."""
         if self.current_pdf:
             page = self.current_pdf.load_page(self.current_page)
             zoom_matrix = fitz.Matrix(0.8, 0.8)
@@ -251,6 +288,7 @@ class PDFBulkHighlighter:
             self.total_page_number_var.set("0/0")
 
     def change_page(self, delta):
+        """Change current page by delta, update preview."""
         if self.current_pdf:
             new_page = self.current_page + delta
             if 0 <= new_page < self.page_count:
@@ -258,6 +296,7 @@ class PDFBulkHighlighter:
                 self.update_preview()
 
     def go_to_page(self):
+        """Go to specified page, update preview."""
         page_num = self.page_number_var.get()
         try:
             page_num = int(page_num) - 1
@@ -266,6 +305,5 @@ class PDFBulkHighlighter:
                 self.update_preview()
         except ValueError:
             pass
-
 
 a = PDFBulkHighlighter()
