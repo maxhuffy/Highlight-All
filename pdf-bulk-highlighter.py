@@ -24,9 +24,7 @@ class PDFBulkHighlighter:
         self.disable_buttons()
         self.root.resizable(0, 0)
         self.root.mainloop()
-
         
-
     def _build_gui(self):
         # Select PDFs
         self.select_button = tk.Button(self.root, text="Select PDFs", command=self.select_pdfs, width=13)
