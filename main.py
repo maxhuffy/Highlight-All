@@ -22,20 +22,6 @@ class PDFBulkHighlighter:
         self.root.mainloop()
 
     def _build_gui(self):
-        # select_frame = tk.Frame(self.root)
-        # select_frame.grid(row=0, column=0, padx=5, pady=5, rowspan=5, columnspan=7)
-
-        # text_finder_frame = tk.Frame(self.root)
-        # text_finder_frame.grid(row=6, column=0, padx=5, pady=5)
-
-        # text_finder_buttons_frame = tk.Frame(text_finder_frame)
-        # text_finder_buttons_frame.grid(row=0, column=0, padx=5, rowspan=2)
-
-        # text_finder_list_frame = tk.Frame(text_finder_frame)
-        # text_finder_list_frame.grid(row=1, column=0, padx=5, pady=5)
-
-        # preview_frame = tk.Frame(self.root)
-        # preview_frame.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
 
         # Select PDFs frame
         select_button = tk.Button(self.root, text="Select PDFs", command=self.select_pdfs, width=13)
@@ -63,6 +49,7 @@ class PDFBulkHighlighter:
 
         self.modifiers_text_entry = tk.Entry(self.root, width=37)
         self.modifiers_text_entry.grid(row=4+5, column=1, sticky="w", columnspan=3)
+        self.modifiers_text_entry.bind("<Return>", self.add_text)
 
         self.modifiers_text_listbox = tk.Listbox(self.root, width=37, selectmode=tk.EXTENDED)
         self.modifiers_text_listbox.grid(row=5+5, column=1, pady=5, sticky="w", columnspan=3, rowspan=6)
@@ -143,7 +130,7 @@ class PDFBulkHighlighter:
         self.current_page = 0
         self.update_preview()
 
-    def add_text(self):
+    def add_text(self, event=None):
         text = self.modifiers_text_entry.get()
         if text:
             self.modifiers_text_listbox.insert(tk.END, text)
@@ -202,8 +189,6 @@ class PDFBulkHighlighter:
             
             if space_count == num_of_words:
                 # Avoid double highlighting since the colors can stack
-                
-
                 if self.markLong.get() == 1:
                     r = fitz.Rect(wlist[w+i][:4])     
                     r.x0 = 0
