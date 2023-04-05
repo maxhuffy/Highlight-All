@@ -7,9 +7,13 @@ class PDFBulkHighlighter:
     def __init__(self):
         self.current_pdf = None
         self.current_page = 0
+
+        self.colors_backup = [(255.0, 255.0, 119.0), "#FFFF77"]
         self.colors = [(255.0, 255.0, 119.0), "#FFFF77"]
         self.page_count = 0
         self.no_highlights = True
+
+        self.selected_pdf = None
 
         self.root = tk.Tk()
         self.root.title("PDF Bulk Highlighter")
@@ -18,89 +22,99 @@ class PDFBulkHighlighter:
         self.root.mainloop()
 
     def _build_gui(self):
-        select_frame = tk.Frame(self.root)
-        select_frame.grid(row=0, column=0, padx=5, pady=5, rowspan=2)
+        # select_frame = tk.Frame(self.root)
+        # select_frame.grid(row=0, column=0, padx=5, pady=5, rowspan=5, columnspan=7)
 
-        text_finder_frame = tk.Frame(self.root)
-        text_finder_frame.grid(row=0, column=1, padx=5, pady=5, rowspan=3)
+        # text_finder_frame = tk.Frame(self.root)
+        # text_finder_frame.grid(row=6, column=0, padx=5, pady=5)
 
-        text_finder_buttons_frame = tk.Frame(text_finder_frame)
-        text_finder_buttons_frame.grid(row=0, column=0, padx=5)
+        # text_finder_buttons_frame = tk.Frame(text_finder_frame)
+        # text_finder_buttons_frame.grid(row=0, column=0, padx=5, rowspan=2)
 
-        text_finder_list_frame = tk.Frame(text_finder_frame)
-        text_finder_list_frame.grid(row=1, column=0, padx=5, pady=5)
+        # text_finder_list_frame = tk.Frame(text_finder_frame)
+        # text_finder_list_frame.grid(row=1, column=0, padx=5, pady=5)
 
-        preview_frame = tk.Frame(self.root)
-        preview_frame.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
+        # preview_frame = tk.Frame(self.root)
+        # preview_frame.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
 
         # Select PDFs frame
-        select_button = tk.Button(select_frame, text="Select PDFs", command=self.select_pdfs)
-        select_button.grid(row=0, column=0, pady=10)
+        select_button = tk.Button(self.root, text="Select PDFs", command=self.select_pdfs, width=13)
+        select_button.grid(row=0, column=1, pady=5, sticky="w")
 
-        clear_button = tk.Button(select_frame, text="Clear PDFs", command=self.clear_pdfs)
-        clear_button.grid(row=0, column=1, pady=10)
+        clear_button = tk.Button(self.root, text="Clear PDFs", command=self.clear_pdfs, width=13)
+        clear_button.grid(row=0, column=2, pady=0, sticky="w")
 
-        self.pdf_listbox = tk.Listbox(select_frame, width=75)
-        self.pdf_listbox.grid(row=1, column=0, columnspan=2, pady=10)
+        self.pdf_listbox = tk.Listbox(self.root, width=75)
+        self.pdf_listbox.grid(row=1, column=1, pady=5, columnspan=12, sticky="w", rowspan=5)
         self.pdf_listbox.bind("<<ListboxSelect>>", self.on_pdf_selected)
 
+        spacer = tk.Frame(self.root, width=10, height=30)
+        spacer.grid(row=2+5, column=1)
+
         # Text Finder frame
-        modifiers_add_button = tk.Button(text_finder_buttons_frame, text="Add Text", command=self.add_text)
-        modifiers_add_button.grid(row=0, column=0, pady=10, padx=5)
+        modifiers_add_button = tk.Button(self.root, text="Add Text", command=self.add_text, width=13)
+        modifiers_add_button.grid(row=3+5, column=1, pady=5, sticky="w")
 
-        modifiers_remove_button = tk.Button(text_finder_buttons_frame, text="Remove Text", command=self.remove_text)
-        modifiers_remove_button.grid(row=0, column=1, pady=10, padx=5)
+        modifiers_remove_button = tk.Button(self.root, text="Remove Text", command=self.remove_text, width=13)
+        modifiers_remove_button.grid(row=3+5, column=2, pady=5, sticky="w")
 
-        modifiers_text = tk.Label(text_finder_list_frame, text="Find:")
-        modifiers_text.grid(row=0, column=0, padx=5)
+        modifiers_text = tk.Label(self.root, text="Find:")
+        modifiers_text.grid(row=4+5, column=0, padx=5, sticky="e")
 
-        self.modifiers_text_entry = tk.Entry(text_finder_list_frame, width=33)
-        self.modifiers_text_entry.grid(row=0, column=1, padx=5)
+        self.modifiers_text_entry = tk.Entry(self.root, width=37)
+        self.modifiers_text_entry.grid(row=4+5, column=1, sticky="w", columnspan=3)
 
-        self.modifiers_text_listbox = tk.Listbox(text_finder_list_frame, width=33, selectmode=tk.EXTENDED)
-        self.modifiers_text_listbox.grid(row=1, column=1, pady=10)
+        self.modifiers_text_listbox = tk.Listbox(self.root, width=37, selectmode=tk.EXTENDED)
+        self.modifiers_text_listbox.grid(row=5+5, column=1, pady=5, sticky="w", columnspan=3, rowspan=6)
 
-        highlight_options_button = tk.Button(text_finder_list_frame, text="Choose Highlight", command=self.change_color)
-        highlight_options_button.grid(row=0, column=3, pady=10)
-        self.highlight_options_selected_color = tk.Frame(text_finder_list_frame, bg=self.colors[1], width=35, height=35)
-        self.highlight_options_selected_color.grid(row=0, column=2, pady=10, padx=10)
+        ##########
 
+        highlight_options_button = tk.Button(self.root, text="Color Picker", command=self.change_color, width=13)
+        highlight_options_button.grid(row=5+5, column=4, padx=10, sticky="w")
+        self.highlight_options_selected_color = tk.Frame(self.root, bg=self.colors[1], width=75, height=25)
+        self.highlight_options_selected_color.grid(row=5+5, column=5, padx=25)
+
+        apply_highlight_button = tk.Button(self.root, text="Apply Highlight", command=self.apply_highlight, width=13)
+        apply_highlight_button.grid(row=6+5, column=4, padx=10, sticky="w")
+
+        reset_highlight_button = tk.Button(self.root, text="Reset Highlights", command=self.reset_pdf, width=13)
+        reset_highlight_button.grid(row=6+5+1, column=4, padx=10, sticky="w")
+
+        save_highlight_button = tk.Button(self.root, text="Save File", command=self.save_file, width=13)
+        save_highlight_button.grid(row=13+18, column=1, sticky="w")
         self.markLong = tk.IntVar()
-        long_marking_checkbox = tk.Checkbutton(text_finder_list_frame, text="Highlight entire line?", variable=self.markLong)
-        long_marking_checkbox.grid(row=0, column=4, padx=5, pady=5)
-
-        apply_highlight_button = tk.Button(text_finder_list_frame, text="Find Words", command=self.apply_highlight)
-        apply_highlight_button.grid(row=1, column=2, pady=10)
-        save_highlight_button = tk.Button(text_finder_list_frame, text="Save Highlight ", command=self.save_file)
-        save_highlight_button.grid(row=1, column=3, pady=10)
+        long_marking_checkbox = tk.Checkbutton(self.root, text="Highlight entire line?", variable=self.markLong)
+        long_marking_checkbox.grid(row=6+5, column=5, sticky="w")
 
      
-        # Preview frame
-        self.pdf_preview = tk.Label(preview_frame)
-        self.pdf_preview.grid(row=2, column=0, padx=5, pady=5)
-        pdf_preview_title = tk.Label(preview_frame, text="Preview")
-        pdf_preview_title.grid(row=1, column=0, padx=5)
+        # # Preview frame
+
+        self.pdf_preview = tk.Label(self.root)
+        self.pdf_preview.grid(row=2, column=10, padx=5, pady=5, rowspan=30)
+
+        page_controls = tk.Frame(self.root)
+        page_controls.grid(row=0, column=10, padx=5, pady=5)
+
+        pdf_preview_title = tk.Label(page_controls, text="Page")
+        pdf_preview_title.grid(row=0, column=0, padx=5)
         pdf_preview_title.config(font=("Arial", 14))
 
-        page_controls = tk.Frame(preview_frame)
-        page_controls.grid(row=1, column=1, padx=5, pady=5)
-
         prev_button = tk.Button(page_controls, text="<", command=lambda: self.change_page(-1))
-        prev_button.grid(row=0, column=0)
+        prev_button.grid(row=0, column=1)
 
         self.total_page_number_var = tk.StringVar(value="0/0")
         total_page_entry = tk.Label(page_controls, textvariable=self.total_page_number_var)
-        total_page_entry.grid(row=0, column=1)
+        total_page_entry.grid(row=0, column=2)
         total_page_entry.config(font=("Arial", 16))
 
         self.page_number_var = tk.StringVar()
         page_entry = tk.Entry(page_controls, textvariable=self.page_number_var, width=5)
-        page_entry.grid(row=1, column=1)
+        page_entry.grid(row=1, column=2)
 
         page_entry.bind("<Return>", lambda event: self.go_to_page())
 
         next_button = tk.Button(page_controls, text=">", command=lambda: self.change_page(1))
-        next_button.grid(row=0, column=2)
+        next_button.grid(row=0, column=3)
 
     def select_pdfs(self):
         file_paths = filedialog.askopenfilenames(filetypes=[("PDF Files", "*.pdf")])
@@ -108,7 +122,6 @@ class PDFBulkHighlighter:
             self.pdf_listbox.insert(tk.END, file_path)
         if len(file_paths) == 1:
             self.pdf_listbox.selection_set(0)
-            # self.pdf_listbox.activate(0)
             self.on_pdf_selected()
 
     def clear_pdfs(self):
@@ -117,11 +130,15 @@ class PDFBulkHighlighter:
         self.page_count = 0
         self.update_preview()
 
+    def reset_pdf(self):
+        self.current_pdf = fitz.open(self.selected_pdf)
+        self.update_preview()
+
     def on_pdf_selected(self, event=None):
         self.no_highlights = True
-        selected_pdf = self.pdf_listbox.get(self.pdf_listbox.curselection())
+        self.selected_pdf = self.pdf_listbox.get(self.pdf_listbox.curselection())
         # Stores the doc as a internal variable
-        self.current_pdf = fitz.open(selected_pdf)
+        self.current_pdf = fitz.open(self.selected_pdf)
         self.page_count = len(self.current_pdf)
         self.current_page = 0
         self.update_preview()
@@ -139,9 +156,11 @@ class PDFBulkHighlighter:
 
     def change_color(self):
         self.colors = colorchooser.askcolor(title="Highlighter Color", color=self.colors[1])
-        if self.colors:
+        if self.colors[0]:
             self.highlight_options_selected_color.config(bg=self.colors[1])
-        print(self.colors)
+            self.colors_backup = self.colors
+        else:
+            self.colors = self.colors_backup
 
     def mark_word(self, page, text):
         """Underline each word that contains 'text'."""
