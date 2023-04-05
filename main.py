@@ -3,232 +3,175 @@ from tkinter import filedialog, colorchooser
 import fitz  # PyMuPDF
 from PIL import Image, ImageTk
 
-def select_pdfs():
-    file_paths = filedialog.askopenfilenames(filetypes=[("PDF Files", "*.pdf")])
-    if file_paths:
+class PDFBulkHighlighter:
+    def __init__(self):
+        self.current_pdf = None
+        self.current_page = 0
+        self.colors = [None, "#FFFF77"]
+        self.page_count = 0
+        self.modified_pdf_doc = None
+        self.no_init_highlights = True
+
+        self.root = tk.Tk()
+        self.root.title("PDF Bulk Highlighter")
+        self._build_gui()
+        self.root.resizable(0, 0)
+        self.root.mainloop()
+
+    def _build_gui(self):
+        select_frame = tk.Frame(self.root)
+        select_frame.grid(row=0, column=0, padx=5, pady=5, rowspan=2)
+
+        text_finder_frame = tk.Frame(self.root)
+        text_finder_frame.grid(row=0, column=1, padx=5, pady=5, rowspan=3)
+
+        text_finder_buttons_frame = tk.Frame(text_finder_frame)
+        text_finder_buttons_frame.grid(row=0, column=0, padx=5)
+
+        text_finder_list_frame = tk.Frame(text_finder_frame)
+        text_finder_list_frame.grid(row=1, column=0, padx=5, pady=5)
+
+        preview_frame = tk.Frame(self.root)
+        preview_frame.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
+
+        # Select PDFs frame
+        select_button = tk.Button(select_frame, text="Select PDFs", command=self.select_pdfs)
+        select_button.grid(row=0, column=0, pady=10)
+
+        clear_button = tk.Button(select_frame, text="Clear PDFs", command=self.clear_pdfs)
+        clear_button.grid(row=0, column=1, pady=10)
+
+        self.pdf_listbox = tk.Listbox(select_frame, width=75)
+        self.pdf_listbox.grid(row=1, column=0, columnspan=2, pady=10)
+        self.pdf_listbox.bind("<<ListboxSelect>>", self.on_pdf_selected)
+
+        # Text Finder frame
+        modifiers_add_button = tk.Button(text_finder_buttons_frame, text="Add Text", command=self.add_text)
+        modifiers_add_button.grid(row=0, column=0, pady=10, padx=5)
+
+        modifiers_remove_button = tk.Button(text_finder_buttons_frame, text="Remove Text", command=self.remove_text)
+        modifiers_remove_button.grid(row=0, column=1, pady=10, padx=5)
+
+        modifiers_text = tk.Label(text_finder_list_frame, text="Find:")
+        modifiers_text.grid(row=0, column=0, padx=5)
+
+        self.modifiers_text_entry = tk.Entry(text_finder_list_frame, width=33)
+        self.modifiers_text_entry.grid(row=0, column=1, padx=5)
+
+        self.modifiers_text_listbox = tk.Listbox(text_finder_list_frame, width=33, selectmode=tk.EXTENDED)
+        self.modifiers_text_listbox.grid(row=1, column=1, pady=10)
+
+        highlight_options_button = tk.Button(text_finder_list_frame, text="Choose Highlight", command=self.change_color)
+        highlight_options_button.grid(row=0, column=3, pady=10)
+        self.highlight_options_selected_color = tk.Frame(text_finder_list_frame, bg=self.colors[1], width=35, height=35)
+        self.highlight_options_selected_color.grid(row=0, column=2, pady=10, padx=10)
+
+        apply_highlight_button = tk.Button(text_finder_list_frame, text="Find Words", command=self.apply_highlight)
+        apply_highlight_button.grid(row=1, column=2, pady=10)
+        save_highlight_button = tk.Button(text_finder_list_frame, text="Save Highlight ", command=self.save_file)
+        save_highlight_button.grid(row=1, column=3, pady=10)
+
+        # Preview frame
+        self.pdf_preview = tk.Label(preview_frame)
+        self.pdf_preview.grid(row=2, column=0, padx=5, pady=5)
+        pdf_preview_title = tk.Label(preview_frame, text="Preview")
+        pdf_preview_title.grid(row=1, column=0, padx=5)
+        pdf_preview_title.config(font=("Arial", 14))
+
+        page_controls = tk.Frame(preview_frame)
+        page_controls.grid(row=1, column=1, padx=5, pady=5)
+
+        prev_button = tk.Button(page_controls, text="<", command=lambda: self.change_page(-1))
+        prev_button.grid(row=0, column=0)
+
+        self.total_page_number_var = tk.StringVar(value="0/0")
+        total_page_entry = tk.Label(page_controls, textvariable=self.total_page_number_var)
+        total_page_entry.grid(row=0, column=1)
+        total_page_entry.config(font=("Arial", 16))
+
+        self.page_number_var = tk.StringVar()
+        page_entry = tk.Entry(page_controls, textvariable=self.page_number_var, width=5)
+        page_entry.grid(row=1, column=1)
+
+        page_entry.bind("<Return>", lambda event: self.go_to_page())
+
+        next_button = tk.Button(page_controls, text=">", command=lambda: self.change_page(1))
+        next_button.grid(row=0, column=2)
+
+    def select_pdfs(self):
+        file_paths = filedialog.askopenfilenames(filetypes=[("PDF Files", "*.pdf")])
         for file_path in file_paths:
-            pdf_listbox.insert(tk.END, file_path)
+            self.pdf_listbox.insert(tk.END, file_path)
 
-def clear_pdfs():
-    pdf_listbox.delete(0, tk.END)
+    def clear_pdfs(self):
+        self.pdf_listbox.delete(0, tk.END)
+        self.current_pdf = None
+        self.page_count = 0
+        self.update_preview()
 
-def add_text():
-    text = modifiers_text_entry.get()
-    if text:
-        modifiers_text_listbox.insert(tk.END, text)
-        modifiers_text_entry.delete(0, tk.END)
+    def on_pdf_selected(self, event):
+        selected_pdf = self.pdf_listbox.get(self.pdf_listbox.curselection())
+        self.current_pdf = fitz.open(selected_pdf)
+        self.page_count = len(self.current_pdf)
+        self.current_page = 0
+        self.update_preview()
 
-def remove_text():
-    selected = modifiers_text_listbox.curselection()
-    if selected:
-        for index in reversed(selected):
-            modifiers_text_listbox.delete(index)
+    def add_text(self):
+        text = self.modifiers_text_entry.get()
+        if text:
+            self.modifiers_text_listbox.insert(tk.END, text)
+            self.modifiers_text_entry.delete(0, tk.END)
 
-def update_preview(file_path, page_number, no_init_highlights=True):
-    pdf_doc = fitz.open(file_path)
-    
-    global page_count
-    page_count = len(pdf_doc)
+    def remove_text(self):
+        selected_indices = self.modifiers_text_listbox.curselection()
+        for index in reversed(selected_indices):
+            self.modifiers_text_listbox.delete(index)
 
-    if 0 <= page_number < page_count:
-        page = pdf_doc[page_number]
-        zoom = 0.8
-        matrix = fitz.Matrix(zoom, zoom)
-        pixmap = page.get_pixmap(matrix=matrix)
+    def change_color(self):
+        color = colorchooser.askcolor()[1]
+        if color:
+            self.colors[1] = color
+            self.highlight_options_selected_color.config(bg=color)
 
-        pil_image = Image.frombytes("RGB", [pixmap.width, pixmap.height], pixmap.samples)
-        image_tk = ImageTk.PhotoImage(pil_image)
+    def apply_highlight(self):
+        # Write code to apply the highlight to the selected text in the PDF
+        None
 
-        pdf_preview.config(image=image_tk)
-        pdf_preview.image = image_tk
+    def save_file(self):
+        # Write code to apply the highlight to the selected text in the PDF
+        None
 
-        page_number_var.set(f"{page_number + 1}")
-        total_page_number_var.set(f"{page_number + 1}/{page_count}")
-
-        if no_init_highlights:
-            pdf_preview_modified.config(image=image_tk)
-            pdf_preview_modified.image = image_tk
+    def update_preview(self):
+        if self.current_pdf:
+            page = self.current_pdf.load_page(self.current_page)
+            zoom_matrix = fitz.Matrix(0.8, 0.8)
+            pix = page.get_pixmap(matrix=zoom_matrix)
+            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+            img = ImageTk.PhotoImage(img)
+            self.pdf_preview.config(image=img)
+            self.pdf_preview.image = img
+            self.total_page_number_var.set(f"{self.current_page + 1}/{self.page_count}")
+            self.page_number_var.set(str(self.current_page + 1))
         else:
-            None
-            update_modified_preview_doc(page_number, page_count)
+            self.pdf_preview.config(image="")
+            self.total_page_number_var.set("0/0")
 
-def mark_word(page, text):
-    """Underline each word that contains 'text'.
-    """
-    found = 0
-    wlist = page.get_text("words")  # make the word list
-    for w in wlist:  # scan through all words on page
-        if text in w[4]:  # w[4] is the word's string
-            found += 1  # count
-            r = fitz.Rect(w[:4])  # make rect from word bbox
-            page.add_underline_annot(r)  # underline
-            print("Found!")
-    return found
+    def change_page(self, delta):
+        if self.current_pdf:
+            new_page = self.current_page + delta
+            if 0 <= new_page < self.page_count:
+                self.current_page = new_page
+                self.update_preview()
 
-def apply_highlight():
-    global no_init_highlights
-    no_init_highlights = False
-
-    global modified_pdf_doc
-    modified_pdf_doc = fitz.open(current_pdf)
-    
-    for page in modified_pdf_doc:
-        for word in modifiers_text_listbox.get(0, tk.END):
-            found = mark_word(page, word)
-
-def update_modified_preview_doc(page_number, page_count):
-
-    if 0 <= page_number < page_count:
-        page = modified_pdf_doc[page_number]
-        zoom = 0.8
-        matrix = fitz.Matrix(zoom, zoom)
-        pixmap = page.get_pixmap(matrix=matrix)
-
-        pil_image = Image.frombytes("RGB", [pixmap.width, pixmap.height], pixmap.samples)
-        image_tk = ImageTk.PhotoImage(pil_image)
-
-        pdf_preview_modified.config(image=image_tk)
-        pdf_preview_modified.image = image_tk
+    def go_to_page(self):
+        page_num = self.page_number_var.get()
+        try:
+            page_num = int(page_num) - 1
+            if 0 <= page_num < self.page_count:
+                self.current_page = page_num
+                self.update_preview()
+        except ValueError:
+            pass
 
 
-def on_pdf_selected(event):
-    global current_pdf
-    global current_page
-
-    current_pdf = pdf_listbox.get(pdf_listbox.curselection())
-    current_page = 0
-    update_preview(current_pdf, current_page)
-
-def change_page(increment):
-    global current_page
-    
-    if (current_page == 0) and (increment < 0):
-        return
-    
-    if (current_page == page_count-1) and (increment > 0):
-        return
-
-    if current_pdf:
-        current_page += increment
-        update_preview(current_pdf, current_page)
-
-def go_to_page():
-    if current_pdf:
-        pg = int(page_entry.get())
-        if pg < 1:
-            pg = 1
-        elif pg > page_count:
-            pg = page_count
-        else:
-            None
-        
-        update_preview(current_pdf, pg-1)
-
-def change_color():
-    global colors
-    colors = colorchooser.askcolor(title="Tkinter Color Chooser", color=colors[1])
-    highlight_options_selected_color.configure(bg=colors[1])
-
-current_pdf = None
-current_page = 0
-
-colors = [None, "#FFFF77"]
-
-global no_init_highlights
-no_init_highlights = True
-
-root = tk.Tk()
-root.title("PDF Bulk Highlighter")
-
-select_frame = tk.Frame(root)
-select_frame.grid(row=0, column=0, padx=5, pady=5, rowspan=2)
-
-
-text_finder_frame = tk.Frame(root)
-text_finder_frame.grid(row=0, column=1, padx=5, pady=5, rowspan=3)
-
-text_finder_buttons_frame = tk.Frame(text_finder_frame)
-text_finder_buttons_frame.grid(row=0, column=0, padx=5)
-
-text_finder_list_frame = tk.Frame(text_finder_frame)
-text_finder_list_frame.grid(row=1, column=0, padx=5, pady=5)
-
-
-preview_frame = tk.Frame(root)
-preview_frame.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
-
-#######################################
-
-select_button = tk.Button(select_frame, text="Select PDFs", command=select_pdfs)
-select_button.grid(row=0, column=0, pady=10)
-
-clear_button = tk.Button(select_frame, text="Clear PDFs", command=clear_pdfs)
-clear_button.grid(row=0, column=1, pady=10)
-
-pdf_listbox = tk.Listbox(select_frame, width=75)
-pdf_listbox.grid(row=1, column=0, columnspan=2, pady=10)
-pdf_listbox.bind("<<ListboxSelect>>", on_pdf_selected)
-
-
-modifiers_add_button = tk.Button(text_finder_buttons_frame, text="Add Text", command=add_text)
-modifiers_add_button.grid(row=0, column=0, pady=10, padx=5)
-
-modifiers_remove_button = tk.Button(text_finder_buttons_frame, text="Remove Text", command=remove_text)
-modifiers_remove_button.grid(row=0, column=1, pady=10, padx=5)
-
-modifiers_text = tk.Label(text_finder_list_frame, text="Find:")
-modifiers_text.grid(row=0, column=0, padx=5)
-
-modifiers_text_entry = tk.Entry(text_finder_list_frame, width=33)
-modifiers_text_entry.grid(row=0, column=1, padx=5)
-
-modifiers_text_listbox = tk.Listbox(text_finder_list_frame, width=33, selectmode=tk.EXTENDED)
-modifiers_text_listbox.grid(row=1, column=1, pady=10)
-
-highlight_options_button = tk.Button(text_finder_list_frame, text="Choose Highlight", command=change_color)
-highlight_options_button.grid(row=0, column=3, pady=10)
-highlight_options_selected_color = tk.Frame(text_finder_list_frame, bg=colors[1], width=35, height=35)
-highlight_options_selected_color.grid(row=0, column=2, pady=10, padx=10)
-
-apply_highlight_button = tk.Button(text_finder_list_frame, text="Find Words", command=apply_highlight)
-apply_highlight_button.grid(row=1, column=2, pady=10)
-apply_highlight_button = tk.Button(text_finder_list_frame, text="Apply")
-apply_highlight_button.grid(row=1, column=3, pady=10)
-
-
-pdf_preview = tk.Label(preview_frame)
-pdf_preview.grid(row=2, column=0, padx=5, pady=5)
-pdf_preview_title = tk.Label(preview_frame, text="Original")
-pdf_preview_title.grid(row=1, column=0, padx=5)
-pdf_preview_title.config(font =("Arial", 14))
-
-page_controls = tk.Frame(preview_frame)
-page_controls.grid(row=1, column=1, padx=5, pady=5)
-
-pdf_preview_modified = tk.Label(preview_frame)
-pdf_preview_modified.grid(row=2, column=2, padx=5, pady=5)
-pdf_preview_title_modified = tk.Label(preview_frame, text="Modified")
-pdf_preview_title_modified.grid(row=1, column=2, padx=5)
-pdf_preview_title_modified.config(font =("Arial", 14))
-
-prev_button = tk.Button(page_controls, text="<", command=lambda: change_page(-1))
-prev_button.grid(row=0, column=0)
-
-total_page_number_var = tk.StringVar(value="0/0")
-total_page_entry = tk.Label(page_controls, textvariable=total_page_number_var)
-total_page_entry.grid(row=0, column=1)
-total_page_entry.config(font =("Arial", 16))
-
-page_number_var = tk.StringVar()
-page_entry = tk.Entry(page_controls, textvariable=page_number_var, width=5)
-page_entry.grid(row=1, column=1)
-
-page_entry.bind("<Return>", lambda event: go_to_page())
-
-next_button = tk.Button(page_controls, text=">", command=lambda: change_page(1))
-next_button.grid(row=0, column=2)
-
-# Prevent the user from resizing the window
-root.resizable(0, 0)
-
-root.mainloop()
+a = PDFBulkHighlighter()
