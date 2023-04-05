@@ -122,6 +122,11 @@ class PDFBulkHighlighter:
         self.update_preview()
 
     def on_pdf_selected(self, event=None):
+
+        # Catch errors
+        if not self.pdf_listbox.curselection():
+            return
+
         self.no_highlights = True
         self.selected_pdf = self.pdf_listbox.get(self.pdf_listbox.curselection())
         # Stores the doc as a internal variable
