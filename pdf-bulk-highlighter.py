@@ -60,7 +60,6 @@ class PDFBulkHighlighter:
         self.text_listbox.grid(row=5+5, column=1, pady=5, sticky="w", columnspan=3, rowspan=6)
 
         # Highlight Buttons
-
         self.color_picker_button = tk.Button(self.root, text="Color Picker", command=self.change_color, width=13)
         self.color_picker_button.grid(row=5+5, column=4, padx=10, sticky="w")
         self.selected_color_display = tk.Frame(self.root, bg=self.colors[1], width=75, height=25)
@@ -80,7 +79,6 @@ class PDFBulkHighlighter:
 
      
         # Preview
-
         self.pdf_preview = tk.Label(self.root)
         self.pdf_preview.grid(row=2, column=10, padx=5, pady=5, rowspan=30)
 
@@ -306,4 +304,4 @@ class PDFBulkHighlighter:
         except ValueError:
             pass
 
-a = PDFBulkHighlighter()
+foo = PDFBulkHighlighter()
