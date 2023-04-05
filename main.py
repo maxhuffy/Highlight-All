@@ -223,8 +223,11 @@ class PDFBulkHighlighter:
         self.update_preview()
 
     def save_file(self):
-        # Write code to apply the highlight to the selected text in the PDF
-        None
+        init_f = self.selected_pdf.split("/")[-1]
+        init_f = init_f.split(".pdf")[0]
+        save_path = filedialog.asksaveasfilename(initialfile=f"{init_f}_HIGHLIGHTED", defaultextension=".pdf", filetypes=[("PDF Files", "*.pdf")])
+        if save_path:
+            self.current_pdf.save(save_path)
 
     def update_preview(self):
         
