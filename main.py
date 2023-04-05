@@ -7,7 +7,7 @@ class PDFBulkHighlighter:
     def __init__(self):
         self.current_pdf = None
         self.current_page = 0
-        self.colors = [(1.0, 1.0, 119.0/255), "#FFFF77"]
+        self.colors = [(255.0, 255.0, 119.0), "#FFFF77"]
         self.page_count = 0
         self.no_highlights = True
 
@@ -134,23 +134,45 @@ class PDFBulkHighlighter:
             self.highlight_options_selected_color.config(bg=self.colors[1])
         print(self.colors)
 
-    #TODO Make sure that our searches aren't case sensitive - better safe than sorry
     def mark_word(self, page, text):
         """Underline each word that contains 'text'."""
         
         stroke_color = tuple([i/255.0 for i in self.colors[0]])
+        text = text.lower()
+
+        print(page.get_text("dict"))
         
-        found = 0
         wlist = page.get_text("words")  # make the word list
         for w in wlist:  # scan through all words on page
-            if text in w[4]:  # w[4] is the word's string
-                found += 1  # count
+            if text in w[4].lower():  # w[4] is the word's string 
                 r = fitz.Rect(w[:4])  # make rect from word bbox
                 highlight = page.add_highlight_annot(r)
                 highlight.set_colors({"stroke":stroke_color})
-                # highlight.set_colors(stroke=stroke_color)
                 highlight.update()
-        return found
+    
+    def mark_spaced_word(self, page, text):
+        """Underline each word that contains 'text'."""
+        
+        stroke_color = tuple([i/255.0 for i in self.colors[0]])
+
+        num_of_words = len(text.split())
+        text_list = text.split()
+        
+        wlist = page.get_text("words")
+        for w in range(len(wlist)-1):
+            space_count = 0  
+            for i in range(num_of_words):
+                if text_list[i].lower() in wlist[w+i][4].lower():
+                    space_count += 1
+            
+            if space_count == num_of_words:
+                for i in range(num_of_words):
+                    r = fitz.Rect(wlist[w+i][:4])  
+                    highlight = page.add_highlight_annot(r)
+                    highlight.set_colors({"stroke":stroke_color})
+                    highlight.update()
+                    
+                
 
     def apply_highlight(self):
         # Write code to apply the highlight to the selected text in the PDF
@@ -158,7 +180,10 @@ class PDFBulkHighlighter:
 
         for page in self.current_pdf:
             for word in self.modifiers_text_listbox.get(0, tk.END):
-                found = self.mark_word(page, word)
+                if " " in word:
+                    self.mark_spaced_word(page, word)
+                else:
+                    self.mark_word(page, word)
         self.update_preview()
 
     def save_file(self):
