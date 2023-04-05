@@ -106,6 +106,10 @@ class PDFBulkHighlighter:
         file_paths = filedialog.askopenfilenames(filetypes=[("PDF Files", "*.pdf")])
         for file_path in file_paths:
             self.pdf_listbox.insert(tk.END, file_path)
+        if len(file_paths) == 1:
+            self.pdf_listbox.selection_set(0)
+            # self.pdf_listbox.activate(0)
+            self.on_pdf_selected()
 
     def clear_pdfs(self):
         self.pdf_listbox.delete(0, tk.END)
@@ -113,7 +117,7 @@ class PDFBulkHighlighter:
         self.page_count = 0
         self.update_preview()
 
-    def on_pdf_selected(self, event):
+    def on_pdf_selected(self, event=None):
         self.no_highlights = True
         selected_pdf = self.pdf_listbox.get(self.pdf_listbox.curselection())
         # Stores the doc as a internal variable
