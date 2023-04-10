@@ -18,13 +18,15 @@ class PDFBulkHighlighter:
 
         self.selected_pdf = None
 
+        self.long_mark_width_num = 4
+
         self.root = tk.Tk()
         self.root.title("PDF Bulk Highlighter")
         self._build_gui()
         self.disable_buttons()
         self.root.resizable(0, 0)
         self.root.mainloop()
-        
+
     def _build_gui(self):
         # Select PDFs
         self.select_button = tk.Button(self.root, text="Select PDFs", command=self.select_pdfs, width=13)
@@ -71,10 +73,23 @@ class PDFBulkHighlighter:
 
         self.save_file_button = tk.Button(self.root, text="Save File", command=self.save_file, width=13)
         self.save_file_button.grid(row=13+18, column=1, sticky="w")
-        self.markLong = tk.IntVar()
-        self.highlight_whole_line_checkbox = tk.Checkbutton(self.root, text="Highlight entire line?", variable=self.markLong)
-        self.highlight_whole_line_checkbox.grid(row=6+5, column=5, sticky="w")
+        
 
+        long_mark_width_frame = tk.Frame(self.root)
+        long_mark_width_frame.grid(row=11, column=5)
+        
+        self.markLong = tk.IntVar()
+        self.highlight_whole_line_checkbox = tk.Checkbutton(long_mark_width_frame, text="Highlight entire line?", variable=self.markLong)
+        self.highlight_whole_line_checkbox.pack(side=tk.TOP)
+        self.highlight_whole_line_checkbox.bind("<Button>", lambda event: self.disable_long_mark_width())
+
+
+        long_mark_label = tk.Label(long_mark_width_frame, text="Vertical Width:")
+        long_mark_label.pack(side=tk.LEFT)
+        self.long_mark_width = tk.IntVar(value=4)
+        self.long_mark_width_entry = tk.Entry(long_mark_width_frame, textvariable=self.long_mark_width, width=6)
+        self.long_mark_width_entry.pack(side=tk.LEFT)
+        self.long_mark_width_entry.bind("<Key>", lambda event: self.update_long_mark_width())
      
         # Preview
         self.pdf_preview = tk.Label(self.root)
@@ -114,6 +129,7 @@ class PDFBulkHighlighter:
         self.reset_highlights_button.config(state=tk.DISABLED)
         self.save_file_button.config(state=tk.DISABLED)
         self.highlight_whole_line_checkbox.config(state=tk.DISABLED)
+        self.long_mark_width_entry.config(state=tk.DISABLED)
 
     def enable_buttons(self):
         """Enable buttons when a PDF is selected."""
@@ -176,6 +192,16 @@ class PDFBulkHighlighter:
     def add_text(self, event=None):
         """Add entered text to text_listbox."""
         text = self.text_entry.get()
+
+        # If we paste in a large number of terms
+        if "\n" in text:
+            text = text.split("\n")
+            for t in text:
+                if t:
+                    self.text_listbox.insert(tk.END, t)
+                    self.text_entry.delete(0, tk.END)
+            return
+
         if text:
             self.text_listbox.insert(tk.END, text)
             self.text_entry.delete(0, tk.END)
@@ -210,10 +236,11 @@ class PDFBulkHighlighter:
                 if self.markLong.get() == 1:    
                     highlight_rect.x0 = 0
                     highlight_rect.x1 = page.rect.x1
-                    if highlight_rect.y0 > 4:
-                        highlight_rect.y0 -= 4
-                    if highlight_rect.y1 < page.rect.y1 - 4:
-                        highlight_rect.y1 += 4
+
+                    if highlight_rect.y0 > self.long_mark_width_num:
+                        highlight_rect.y0 -= self.long_mark_width_num
+                    if highlight_rect.y1 < page.rect.y1 - self.long_mark_width_num:
+                        highlight_rect.y1 += self.long_mark_width_num
 
                 highlight = page.add_highlight_annot(highlight_rect)
                 highlight.set_colors({"stroke":stroke_color})
@@ -225,13 +252,17 @@ class PDFBulkHighlighter:
 
         num_of_words = len(text.split())
         text_list = text.split()
+
+        while text_list[-1] == " ":
+            print(text_list.pop[-1])
         
         word_list = page.get_text("words")
-        for w in range(len(word_list)-1):
+        for w in range(len(word_list) - num_of_words + 1):
             space_count = 0  
             for i in range(num_of_words):
                 if text_list[i].lower() == word_list[w+i][4].lower():
                     space_count += 1
+
             
             if space_count == num_of_words:
                 # Avoid double highlighting since the colors can stack
@@ -239,10 +270,10 @@ class PDFBulkHighlighter:
                     highlight_rect = fitz.Rect(word_list[w+i][:4])     
                     highlight_rect.x0 = 0
                     highlight_rect.x1 = page.rect.x1
-                    if highlight_rect.y0 > 6:
-                        highlight_rect.y0 -= 6
-                    if highlight_rect.y1 < page.rect.y1 - 6:
-                        highlight_rect.y1 += 6
+                    if highlight_rect.y0 > self.long_mark_width_num:
+                        highlight_rect.y0 -= self.long_mark_width_num
+                    if highlight_rect.y1 < page.rect.y1 - self.long_mark_width_num:
+                        highlight_rect.y1 += self.long_mark_width_num
 
                     highlight = page.add_highlight_annot(highlight_rect)
                     highlight.set_colors({"stroke":stroke_color})
@@ -254,9 +285,24 @@ class PDFBulkHighlighter:
                         highlight.set_colors({"stroke":stroke_color})
                         highlight.update()
                     
+    def update_long_mark_width(self, event=None):
+        try:
+            self.long_mark_width_num = float(self.long_mark_width_entry.get())
+        except:
+            self.long_mark_width.set(4)
+            self.long_mark_width_num = float(self.long_mark_width_entry.get())
+            
+
+    def disable_long_mark_width(self, event=None):
+        if self.markLong.get() == 1:
+            self.long_mark_width_entry.config(state=tk.DISABLED)
+        else:
+            self.long_mark_width_entry.config(state=tk.NORMAL)
+    
     def apply_highlight(self):
         """Apply highlights to PDF, update preview."""
         self.no_highlights = False
+        self.update_long_mark_width()
 
         for page in self.current_pdf:
             for word in self.text_listbox.get(0, tk.END):
@@ -301,5 +347,6 @@ class PDFBulkHighlighter:
                 self.update_preview()
         except ValueError:
             pass
+
 
 foo = PDFBulkHighlighter()
