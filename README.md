@@ -1,2 +1,3 @@
-# pdf-bulk-highlighter
-Simple Python script with GUI to highlight all words within multiple PDF files.
+# PDF-Highlight-All
+
+Allows you to highlight all instances of a word within a PDF file in any color.
